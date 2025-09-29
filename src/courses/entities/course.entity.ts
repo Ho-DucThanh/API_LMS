@@ -44,7 +44,7 @@ export class Course {
   title: string;
 
   @ApiProperty()
-  @Column('text')
+  @Column({ type: 'text' , nullable: true })
   description: string;
 
   @ApiProperty()

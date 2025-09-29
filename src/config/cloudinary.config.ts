@@ -11,3 +11,4 @@ export const configureCloudinary = () => {
 };
 
 export type CloudinaryClient = typeof cloudinary;
+

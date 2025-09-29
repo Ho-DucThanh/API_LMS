@@ -119,4 +119,42 @@ export class AdminController {
   ): Promise<void> {
     return this.adminService.assignRole(+userId, roleName);
   }
+
+  // Categories
+  @Get('categories')
+  @ApiOperation({ summary: 'List course categories' })
+  getCategories() {
+    return this.adminService.getCategories();
+  }
+
+  @Post('categories')
+  @ApiOperation({ summary: 'Create a course category' })
+  createCategory(@Body() body: { name: string; description?: string }) {
+    return this.adminService.createCategory(body);
+  }
+
+  @Delete('categories/:id')
+  @ApiOperation({ summary: 'Delete a course category' })
+  deleteCategory(@Param('id') id: string) {
+    return this.adminService.deleteCategory(+id);
+  }
+
+  // Tags
+  @Get('tags')
+  @ApiOperation({ summary: 'List course tags' })
+  getTags() {
+    return this.adminService.getTags();
+  }
+
+  @Post('tags')
+  @ApiOperation({ summary: 'Create a course tag' })
+  createTag(@Body() body: { name: string }) {
+    return this.adminService.createTag(body);
+  }
+
+  @Delete('tags/:id')
+  @ApiOperation({ summary: 'Delete a course tag' })
+  deleteTag(@Param('id') id: string) {
+    return this.adminService.deleteTag(+id);
+  }
 }

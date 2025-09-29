@@ -9,6 +9,7 @@ import {
   Request,
   Delete,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -96,6 +97,18 @@ export class AssignmentController {
     return this.assignmentService.getInstructorAssignments(req.user.sub);
   }
 
+  @Get('my-submissions')
+  @Roles(UserRoles.ROLE_USER)
+  @ApiOperation({ summary: 'Get current student submissions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Student submissions retrieved successfully',
+    type: [Submission],
+  })
+  getMySubmissions(@Request() req): Promise<Submission[]> {
+    return this.assignmentService.getStudentSubmissions(req.user.sub);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get assignment by ID' })
   @ApiResponse({
@@ -103,8 +116,15 @@ export class AssignmentController {
     description: 'Assignment retrieved successfully',
     type: Assignment,
   })
-  findOne(@Param('id') id: string): Promise<Assignment> {
-    return this.assignmentService.findOne(+id);
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<any> {
+    const a = await this.assignmentService.findOne(id);
+    const due = (a as any)?.due_date ? new Date((a as any).due_date) : null;
+    const overdue = !!(due && !isNaN(due.getTime()) && new Date() > due);
+    return {
+      ...(a as any),
+      overdue,
+      dueDate: due ? due.toISOString() : null,
+    };
   }
 
   @Post(':id/submit')
@@ -119,7 +139,7 @@ export class AssignmentController {
     @Param('id') id: string,
     @Body() submitDto: SubmitAssignmentDto,
     @Request() req,
-  ): Promise<Submission> {
+  ): Promise<Submission | any> {
     return this.assignmentService.submitAssignment(
       +id,
       req.user.sub,
@@ -159,17 +179,6 @@ export class AssignmentController {
     return this.assignmentService.getSubmissionsByAssignment(+id);
   }
 
-  @Get('my-submissions')
-  @Roles(UserRoles.ROLE_USER)
-  @ApiOperation({ summary: 'Get current student submissions' })
-  @ApiResponse({
-    status: 200,
-    description: 'Student submissions retrieved successfully',
-    type: [Submission],
-  })
-  getMySubmissions(@Request() req): Promise<Submission[]> {
-    return this.assignmentService.getStudentSubmissions(req.user.sub);
-  }
   @Patch(':id/status')
   @Roles(UserRoles.ROLE_TEACHER, UserRoles.ROLE_ADMIN)
   @ApiOperation({ summary: 'Update assignment status (active/inactive)' })

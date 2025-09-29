@@ -77,7 +77,9 @@ export class LessonsController {
     const lessonId = Number(id);
     const lesson = await this.lessonRepo.findOne({ where: { id: lessonId } });
     if (!lesson) throw new NotFoundException('Lesson not found');
-    if (!lesson.video_url) throw new BadRequestException('Lesson has no video');
+    if (!lesson.video_url) {
+      return { url: null, reason: 'NO_VIDEO' };
+    }
     // Load course for publish/approval status and enrollment check
     const module = await this.moduleRepo.findOne({
       where: { id: lesson.module_id },
@@ -96,7 +98,7 @@ export class LessonsController {
       const publicId = this.uploadService.extractPublicIdFromUrl(
         lesson.video_url,
       );
-      if (!publicId) throw new BadRequestException('Invalid video URL');
+      if (!publicId) return { url: null, reason: 'INVALID_URL' };
       const url = this.uploadService.generateSignedUrl(publicId, {
         resourceType: 'video',
         deliveryType: 'authenticated',
@@ -118,7 +120,7 @@ export class LessonsController {
     const publicId = this.uploadService.extractPublicIdFromUrl(
       lesson.video_url,
     );
-    if (!publicId) throw new BadRequestException('Invalid video URL');
+    if (!publicId) return { url: null, reason: 'INVALID_URL' };
     const url = this.uploadService.generateSignedUrl(publicId, {
       resourceType: 'video',
       deliveryType: 'authenticated',

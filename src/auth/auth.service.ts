@@ -17,7 +17,7 @@ import { LoginDto } from './dto/login.dto';
 import { UserStatus } from 'src/common/enum/user-status.enum';
 import { JwtUserPayload } from './dto/jwt-user-payload.dto';
 import { instanceToPlain } from 'class-transformer';
-import { ForgotPasswordDto } from './dto/password.dto';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/password.dto';
 import { Role } from 'src/users/entities/role.entity';
 import { UserRoles } from 'src/common/enum/user-role.enum';
 import { MailerService } from '@nestjs-modules/mailer';
@@ -133,7 +133,8 @@ export class AuthService {
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
     const user = await this.userRepo.findOne({ where: { email: dto.email } });
-    if (!user) throw new NotFoundException('User not found');
+    // Do not leak existence of email; simply return if not found
+    if (!user) return;
 
     const token = this.jwtService.sign(
       { sub: user.id, email: user.email },
@@ -143,7 +144,8 @@ export class AuthService {
       },
     );
 
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    const resetLink = `${frontendUrl}/reset-password?token=${token}`;
 
     await this.mailerService.sendMail({
       to: user.email,
@@ -155,7 +157,26 @@ export class AuthService {
       },
     });
 
-    console.log(`Reset password email sent to ${user.email}`);
+    console.log(`Reset password email sent to ${user?.email}`);
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(dto.token, {
+        secret: process.env.JWT_SECRET_KEY!,
+      });
+    } catch (e) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+
+    const user = await this.userRepo.findOne({ where: { id: payload.sub } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const hashed = await bcrypt.hash(dto.newPassword, 10);
+    await this.userRepo.update(user.id, { password: hashed });
   }
 
   // async refreshToken(userId: number): Promise<string> {

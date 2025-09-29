@@ -29,6 +29,12 @@ export class AdminService {
     private courseRepository: Repository<Course>,
     @InjectRepository(Enrollment)
     private enrollmentRepository: Repository<Enrollment>,
+    @InjectRepository(
+      require('../courses/entities/course_category').CourseCategory,
+    )
+    private categoryRepository: Repository<any>,
+    @InjectRepository(require('../courses/entities/tag').Tag)
+    private tagRepository: Repository<any>,
   ) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<User> {
@@ -229,6 +235,48 @@ export class AdminService {
       page,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  // Category / Tag management for admins
+  async getCategories(): Promise<any[]> {
+    return await this.categoryRepository.find({ order: { name: 'ASC' } });
+  }
+
+  async createCategory(body: { name: string; description?: string }) {
+    const existing = await this.categoryRepository.findOne({
+      where: { name: body.name },
+    });
+    if (existing) {
+      throw new ConflictException('Category already exists');
+    }
+    const c = this.categoryRepository.create({
+      name: body.name,
+      description: body.description || '',
+    } as any);
+    return await this.categoryRepository.save(c);
+  }
+
+  async deleteCategory(id: number) {
+    return await this.categoryRepository.delete({ id });
+  }
+
+  async getTags(): Promise<any[]> {
+    return await this.tagRepository.find({ order: { name: 'ASC' } });
+  }
+
+  async createTag(body: { name: string }) {
+    const existing = await this.tagRepository.findOne({
+      where: { name: body.name },
+    });
+    if (existing) {
+      throw new ConflictException('Tag already exists');
+    }
+    const t = this.tagRepository.create({ name: body.name } as any);
+    return await this.tagRepository.save(t);
+  }
+
+  async deleteTag(id: number) {
+    return await this.tagRepository.delete({ id });
   }
 
   // async deleteCourse(courseId: number): Promise<void> {

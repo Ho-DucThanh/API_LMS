@@ -3,6 +3,7 @@ import typeOrmConfig from './config/typeOrmConfig';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { ReportsModule } from './reports/reports.module';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import * as path from 'path';
 import { UsersModule } from './users/users.module';
@@ -19,11 +20,14 @@ import { NotificationModule } from './notifications/notification.module';
 import { UploadModule } from './upload/upload.module';
 import { EventsModule } from './events/events.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { AiRecommendationModule } from './OpenAI/ai-recommendation.module';
 import * as morgan from 'morgan';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot(typeOrmConfig),
+    ScheduleModule.forRoot(),
     AuthModule,
     MailerModule.forRoot({
       transport: {
@@ -58,6 +62,8 @@ import * as morgan from 'morgan';
     ModulesModule,
     LessonsModule,
     ReviewsModule,
+    AiRecommendationModule,
+    ReportsModule,
   ],
 })
 export class AppModule implements NestModule {

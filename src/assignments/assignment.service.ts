@@ -2,7 +2,9 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Assignment } from './entities/assignment.entity';
@@ -35,6 +37,15 @@ export class AssignmentService {
     @InjectRepository(Course)
     private courseRepository: Repository<Course>,
   ) {}
+
+  // optional NotificationService injected by module to avoid circular deps
+  private notificationService?: import('../notifications/notification.service').NotificationService;
+
+  setNotificationService(
+    notificationService: import('../notifications/notification.service').NotificationService,
+  ) {
+    this.notificationService = notificationService;
+  }
 
   async create(
     createAssignmentDto: CreateAssignmentDto,
@@ -151,10 +162,27 @@ export class AssignmentService {
 
     // Check if assignment is still open
     if (!assignment.due_date) {
-      throw new ForbiddenException('Assignment due date is not set');
+      // Gracefully indicate not submittable without triggering client errors
+      return {
+        // @ts-ignore custom response when not submittable
+        success: false,
+        canSubmit: false,
+        reason: 'NO_DUE_DATE',
+        message: 'Assignment due date is not set',
+        assignment_id: assignmentId,
+      } as any;
     }
     if (new Date() > assignment.due_date) {
-      throw new ForbiddenException('Assignment submission deadline has passed');
+      // Return a 200 with payload indicating overdue instead of 4xx
+      return {
+        // @ts-ignore custom response when overdue
+        success: false,
+        canSubmit: false,
+        reason: 'OVERDUE',
+        message: 'Bài tập đã quá hạn, không thể nộp',
+        assignment_id: assignmentId,
+        due_date: assignment.due_date,
+      } as any;
     }
 
     // Check if student already submitted
@@ -221,6 +249,24 @@ export class AssignmentService {
       relations: ['assignment', 'student', 'grader'],
     });
 
+    // Notify student about grade publication
+    try {
+      if (this.notificationService && updatedSubmission?.student_id) {
+        const NotificationType =
+          require('../notifications/entities/notification.entity').NotificationType;
+        await this.notificationService.create({
+          title: 'Grade Published',
+          message: `Your submission for "${updatedSubmission.assignment?.title}" has been graded: ${gradeDto.grade}%`,
+          type: NotificationType.GRADE_PUBLISHED,
+          user_id: updatedSubmission.student_id,
+          related_id: updatedSubmission.assignment_id,
+          action_url: `/assignments/${updatedSubmission.assignment_id}`,
+        } as any);
+      }
+    } catch (err) {
+      console.debug('Failed to send grade notification', err?.message || err);
+    }
+
     return updatedSubmission!;
   }
 
@@ -248,6 +294,68 @@ export class AssignmentService {
       relations: ['lesson', 'submissions'],
       order: { created_at: 'DESC' },
     });
+  }
+
+  // Nightly job: remind students 24h before due date if not submitted
+  @Cron(CronExpression.EVERY_DAY_AT_1AM)
+  async sendDueReminders() {
+    try {
+      const now = new Date();
+      const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      // find assignments due between now+24h window
+      const assignments = await this.assignmentRepository
+        .createQueryBuilder('a')
+        .leftJoinAndSelect('a.lesson', 'lesson')
+        .leftJoinAndSelect('lesson.module', 'module')
+        .leftJoinAndSelect('module.course', 'course')
+        .where('a.due_date IS NOT NULL')
+        .andWhere('a.due_date BETWEEN :start AND :end', {
+          start: new Date(in24h.getTime() - 60 * 60 * 1000), // 23-25h window
+          end: new Date(in24h.getTime() + 60 * 60 * 1000),
+        })
+        .getMany();
+
+      if (!assignments.length || !this.notificationService) return;
+
+      // For each assignment, notify active enrolled students without submission
+      for (const a of assignments) {
+        const courseId =
+          (a as any).lesson?.module?.course?.id || a['course_id'];
+        if (!courseId) continue;
+
+        // students actively enrolled in course
+        const activeEnrollments = await (this as any).moduleRepository.manager
+          .getRepository(
+            require('../enrollments/entities/enrollment.entity').Enrollment,
+          )
+          .createQueryBuilder('e')
+          .where('e.course_id = :courseId', { courseId })
+          .andWhere('e.status = :status', { status: 'ACTIVE' })
+          .getMany();
+
+        const submitted = await this.submissionRepository
+          .createQueryBuilder('s')
+          .select('s.student_id', 'student_id')
+          .where('s.assignment_id = :aid', { aid: a.id })
+          .getRawMany();
+        const submittedIds = new Set(submitted.map((r: any) => r.student_id));
+
+        for (const e of activeEnrollments) {
+          if (submittedIds.has(e.student_id)) continue;
+          await this.notificationService.create({
+            title: 'Assignment Due Soon',
+            message: `Assignment "${a.title}" is due on ${a.due_date?.toLocaleString()}`,
+            type: require('../notifications/entities/notification.entity')
+              .NotificationType.ASSIGNMENT_DUE,
+            user_id: e.student_id,
+            related_id: a.id,
+            action_url: `/assignments/${a.id}`,
+          } as any);
+        }
+      }
+    } catch (err) {
+      console.debug('sendDueReminders failed', err?.message || err);
+    }
   }
 
   async updateStatus(id: number, is_active: boolean): Promise<Assignment> {

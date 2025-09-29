@@ -96,3 +96,16 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+
+# Khởi tạo dự án
+$nest new server
+
+# Di chuyển đến thư mục
+cd server
+
+# Cài các thư viện cần thiết (dependencies)
+npm install @nestjs-modules/mailer @nestjs/common @nestjs/config @nestjs/core @nestjs/event-emitter @nestjs/jwt @nestjs/mapped-types @nestjs/passport @nestjs/platform-express @nestjs/platform-socket.io @nestjs/schedule @nestjs/swagger @nestjs/typeorm @nestjs/websockets @types/cookie-parser @types/multer @types/nodemailer bcrypt class-transformer class-validator cloudinary cookie-parser dotenv morgan multer mysql2 nodemailer openai passport-jwt reflect-metadata rxjs socket.io typeorm
+
+# Cài các thư viện phát triển (devDependencies)
+npm install -D @eslint/eslintrc @eslint/js @nestjs/cli @nestjs/schematics @nestjs/testing @swc/cli @swc/core @types/bcrypt @types/express @types/jest @types/node @types/supertest eslint eslint-config-prettier eslint-plugin-prettier globals jest prettier source-map-support supertest ts-jest ts-loader ts-node tsconfig-paths typescript typescript-eslint

@@ -10,7 +10,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ServiceResponse } from 'src/common/model/service-respone';
-import { ForgotPasswordDto } from './dto/password.dto';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/password.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -89,6 +89,17 @@ export class AuthController {
     );
   }
 
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password via token' })
+  @ApiResponse({ type: ServiceResponse })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto);
+    return ServiceResponse.success(
+      'Password has been reset successfully',
+      null,
+      HttpStatus.OK,
+    );
+  }
 
   // @Post('refresh-token')
   // @UseGuards(JWTAuthGuard)

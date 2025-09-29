@@ -196,37 +196,6 @@ CREATE TABLE lesson_progress (
     UNIQUE KEY unique_enrollment_lesson (enrollment_id, lesson_id)
 );
 
--- forum
-CREATE TABLE forum (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    course_id INT NOT NULL,
-    title VARCHAR(255),
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (course_id) REFERENCES course(id)
-);
-
--- forum_post
-CREATE TABLE forum_post (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    forum_id INT NOT NULL,
-    user_id INT NOT NULL,
-    content TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (forum_id) REFERENCES forum(id),
-    FOREIGN KEY (user_id) REFERENCES `user`(id)
-);
-
--- forum_comment
-CREATE TABLE forum_comment (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    post_id INT NOT NULL,
-    user_id INT NOT NULL,
-    content TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (post_id) REFERENCES forum_post(id),
-    FOREIGN KEY (user_id) REFERENCES `user`(id)
-);
 
 -- notification
 CREATE TABLE notification (
@@ -263,6 +232,32 @@ CREATE TABLE course_review (
     FOREIGN KEY (student_id) REFERENCES `user`(id) ON DELETE CASCADE,
     UNIQUE KEY unique_student_course_review (course_id, student_id)
 );
+
+
+-- Gợi ý/đề xuất do AI tạo ra
+CREATE TABLE ai_recommendation (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  goal_text VARCHAR(500) NOT NULL,       -- mục tiêu (ví dụ: "Trở thành backend developer")
+  input_json JSON NOT NULL,              -- input từ form khảo sát (level, mục tiêu, sở thích, ...)
+  output_json JSON NULL,                 -- output từ AI (roadmap text, các topic, mapping sơ bộ)
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE
+);
+
+-- Mapping các course mà AI đề xuất vào từng giai đoạn
+CREATE TABLE ai_recommendation_course (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  recommendation_id INT NOT NULL,
+  course_id INT NULL,                    
+  stage ENUM('FOUNDATION','INTERMEDIATE','ADVANCED') NOT NULL,
+  order_index INT DEFAULT 0,
+  rationale TEXT,                        
+  FOREIGN KEY (recommendation_id) REFERENCES ai_recommendation(id) ON DELETE CASCADE,
+  FOREIGN KEY (course_id) REFERENCES course(id)
+);
+
+
 
 -- -- system_config
 -- CREATE TABLE system_config (
