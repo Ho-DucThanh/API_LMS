@@ -6,6 +6,7 @@ import {
   Request,
   Param,
   ParseIntPipe,
+  Delete,
 } from '@nestjs/common';
 import { AiRecommendationService } from './ai-recommendation.service';
 import { JWTAuthGuard } from '../common/guard/jwt-auth.guard';
@@ -109,5 +110,16 @@ export class AiRecommendationController {
   async myPaths(@Request() req: any) {
     const userId = req.user?.sub;
     return this.aiRecommendationService.listLearningPaths(userId);
+  }
+
+  // Delete a saved learning path (only owner)
+  @UseGuards(JWTAuthGuard)
+  @Delete('my-paths/:id')
+  async deleteMyPath(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
+  ) {
+    const userId = req.user?.sub;
+    return this.aiRecommendationService.deleteLearningPath(userId, id);
   }
 }

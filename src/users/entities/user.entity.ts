@@ -68,13 +68,6 @@ export class User {
   @OneToMany(() => Submission, (submission) => submission.student)
   submissions?: Submission[];
 
-  // Forum relationships
-  @OneToMany('ForumPost', 'author')
-  forum_posts?: any[];
-
-  @OneToMany('ForumComment', 'author')
-  forum_comments?: any[];
-
   // Notification relationships
   @OneToMany(() => Notification, (notification) => notification.user)
   notifications?: Notification[];

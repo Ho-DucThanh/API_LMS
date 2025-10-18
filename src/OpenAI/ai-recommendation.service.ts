@@ -391,6 +391,19 @@ If you cannot provide keywords, it's OK to return topics as strings. Use ${expla
       topicCount: (r.topics || []).length,
     }));
 
+    // 6. Auto-save a learning path so users can revisit later without extra steps
+    let savedPathId: number | undefined;
+    try {
+      const auto = await this.saveLearningPath({
+        userId,
+        recommendationId: savedRec.id,
+        name: `Lộ trình tự động - ${new Date().toLocaleDateString('vi-VN')}`,
+      });
+      savedPathId = auto?.id;
+    } catch (e) {
+      // non-fatal: still return recommendation data even if auto-save fails
+    }
+
     return {
       id: savedRec.id,
       goal_text: savedRec.goal_text,
@@ -403,6 +416,7 @@ If you cannot provide keywords, it's OK to return topics as strings. Use ${expla
       courses_by_stage: resultByStage,
       // legacy flat courses list kept for backward compatibility
       courses: legacyCourses,
+      saved_path_id: savedPathId,
     };
   }
 
@@ -573,5 +587,18 @@ Requirements:
       order: { updatedAt: 'DESC' },
     });
     return paths;
+  }
+
+  // Delete a saved learning path (owner only). Items are removed by FK cascade.
+  async deleteLearningPath(userId: number, pathId: number) {
+    const path = await this.pathRepo.findOne({
+      where: { id: pathId },
+      relations: ['user'],
+    });
+    if (!path || (path as any).user?.id !== userId) {
+      throw new Error('Learning path not found');
+    }
+    await this.pathRepo.delete({ id: pathId });
+    return { deleted: true, id: pathId };
   }
 }

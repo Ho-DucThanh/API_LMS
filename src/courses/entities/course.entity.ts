@@ -44,7 +44,7 @@ export class Course {
   title: string;
 
   @ApiProperty()
-  @Column({ type: 'text' , nullable: true })
+  @Column({ type: 'text', nullable: true })
   description: string;
 
   @ApiProperty()
@@ -118,7 +118,9 @@ export class Course {
   @JoinColumn({ name: 'instructor_id' })
   instructor: User;
 
-  @ManyToOne(() => CourseCategory, (category) => category.courses, { onDelete: 'CASCADE' })
+  @ManyToOne(() => CourseCategory, (category) => category.courses, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'category_id' })
   category: CourseCategory;
 
@@ -131,8 +133,9 @@ export class Course {
   @OneToMany(() => Module, (module) => module.course)
   modules: Module[];
 
-  @OneToMany('ForumPost', 'course')
-  forum_posts: any[];
+  // Forum module has been removed; delete old relation to avoid TypeORM metadata errors
+  // @OneToMany('ForumPost', 'course')
+  // forum_posts: any[];
 
   // @OneToMany('Review', 'course')
   // reviews: any[];
